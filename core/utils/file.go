@@ -1,4 +1,4 @@
-package file
+package utils
 
 import (
 	"bufio"
@@ -12,7 +12,7 @@ type File struct {
 	path string
 }
 
-func (f *File) New(path string, nameFile string) {
+func NewFile(path string, nameFile string) *File {
 	var file *os.File
 	defer file.Close()
 
@@ -21,10 +21,13 @@ func (f *File) New(path string, nameFile string) {
 		check(err)
 	}
 
-	file, err = os.Create(path + nameFiles)
+	if _, err := os.Stat(path + nameFile); os.IsNotExist(err) {
+		file, err = os.Create(path + nameFile)
+		check(err)
 
-	f.name = nameFile
-	f.path = path
+	}
+
+	return &File{path: path, name: nameFile}
 }
 
 func (f File) GetName() string {
@@ -36,17 +39,17 @@ func (f File) GetDirectoryPath() string {
 }
 
 func (f File) GetFilePath() string {
-	return f.path
+	return f.path + f.name
 }
 
 func (f File) WriteText(lines []string) error {
 	var arq *os.File
 
-	if _, err := os.Stat(a.GetPathFile()); os.IsNotExist(err) {
+	if _, err := os.Stat(f.GetFilePath()); os.IsNotExist(err) {
 		return err
 	}
 
-	arq, err := os.OpenFile(a.Path+a.Name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	arq, err := os.OpenFile(f.GetFilePath(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	check(err)
 
 	defer arq.Close()
@@ -62,17 +65,36 @@ func (f File) WriteText(lines []string) error {
 	return writer.Flush()
 }
 
+func (f File) WriteLine(line string) error {
+	var arq *os.File
+
+	if _, err := os.Stat(f.GetFilePath()); os.IsNotExist(err) {
+		return err
+	}
+
+	arq, err := os.OpenFile(f.GetFilePath(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	check(err)
+
+	defer arq.Close()
+
+	writer := bufio.NewWriter(arq)
+	fmt.Fprintln(writer, line)
+
+	// Caso a funcao flush retorne um erro ele sera retornado aqui tambem
+	return writer.Flush()
+}
+
 // GetContent é uma função que le o conteudo do Files e retorna um slice the string com todas as lines do Files
 func (f *File) GetContent() ([]string, error) {
 
 	file, err := os.Open(f.GetFilePath())
 	check(err)
 
-	defer Files.Close()
+	defer file.Close()
 
 	// Cria um scanner que le cada line do Files
 	var lines []string
-	scanner := bufio.NewScanner(Files)
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
